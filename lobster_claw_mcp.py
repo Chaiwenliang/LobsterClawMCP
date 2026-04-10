@@ -241,7 +241,7 @@ def create_starlette_app(server, *, debug: bool = False) -> Starlette:
         async with sse.connect_sse(request.scope, request.receive, request._send) as (read_stream, write_stream):
             await server.run(read_stream, write_stream, server.create_initialization_options())
 
-    async def health() -> JSONResponse:
+    async def health(request) -> JSONResponse:
         return JSONResponse({"status": "ok", "name": "LobsterClaw"})
 
     return Starlette(
