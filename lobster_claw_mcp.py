@@ -285,12 +285,50 @@ if mcp_server is None:
 app = create_starlette_app(mcp_server, debug=False)
 
 
+@mcp.tool()
+def fill_password(service: str, account: str) -> str:
+    """
+    安全地从 macOS 钥匙串中获取并自动输入密码。
+    AI 不会看到明文密码。
+    """
+    try:
+        cmd = f'security find-generic-password -s "{service}" -a "{account}" -w'
+        res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        pwd = res.stdout.strip()
+
+        if not pwd:
+            tip = f'❌ 找不到密码。请在终端运行: security add-generic-password -s "{service}" -a "{account}" -w "YOUR_PASSWORD"'
+            log_error(f"fill_password 失败: 找不到 {service} 的密码")
+            return tip
+
+        # 模拟真人输入
+        for char in pwd:
+            iv = random.uniform(BASE_INTERVAL, BASE_INTERVAL + TYPE_JITTER)
+            pyautogui.write(char, interval=iv)
+
+        log_info(f"fill_password 成功: 已填充 {service} 的密码")
+        return "✅ 密码已安全填充"
+    except Exception as e:
+        log_error(f"fill_password 异常: {e}")
+        return f"❌ 填充失败: {e}"
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Run LobsterClaw MCP SSE server")
+    import argparse
+    parser = argparse.ArgumentParser(description="Run LobsterClaw MCP server")
+    parser.add_argument("--sse", action="store_true", help="Run as SSE server instead of stdio")
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=17888)
+    parser.add_argument("--port", type=int, default=8090)
     args = parser.parse_args()
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+
+    if args.sse:
+        import uvicorn
+        log_info(f"Starting SSE server on {args.host}:{args.port}")
+        uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    else:
+        # Trae/Claude/Cursor 默认使用 stdio 管道
+        # 使用 mcp.run() 可以让 IDE 直接识别，避免卡在“准备中”
+        mcp.run()
 
 
 if __name__ == "__main__":
