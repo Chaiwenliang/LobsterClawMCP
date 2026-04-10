@@ -198,30 +198,6 @@ def wait(sec: float = 1.0) -> str:
         return "❌ 等待失败"
 
 @mcp.tool()
-def fill_password(service: str, account: str) -> str:
-    try:
-        res = subprocess.run(
-            ["security", "find-generic-password", "-s", service, "-a", account, "-w"],
-            capture_output=True,
-            text=True,
-        )
-        if res.returncode != 0:
-            hint = f'security add-generic-password -s "{service}" -a "{account}" -w "<your_password>"'
-            log_info(f"fill_password: 未找到 {service}/{account}")
-            return f"❌ 未找到密码 {service}/{account}\n👉 可用如下方式添加：\n{hint}"
-        pwd = res.stdout.rstrip("\n")
-        for c in pwd:
-            iv = random.uniform(BASE_INTERVAL, BASE_INTERVAL + TYPE_JITTER)
-            pyautogui.write(c, interval=iv)
-        time.sleep(random.uniform(0.2, 0.4))
-        log_info(f"fill_password: 已输入 {service}/{account}")
-        return "✅ 已安全填充密码"
-    except Exception as e:
-        log_error(f"fill_password 失败 {service}/{account}: {e}")
-        return "❌ 填充密码失败"
-
-
-@mcp.tool()
 def open_app(app_name: str) -> str:
     try:
         subprocess.run(["open", "-a", app_name], capture_output=True)
@@ -292,8 +268,11 @@ def fill_password(service: str, account: str) -> str:
     AI 不会看到明文密码。
     """
     try:
-        cmd = f'security find-generic-password -s "{service}" -a "{account}" -w'
-        res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        res = subprocess.run(
+            ["security", "find-generic-password", "-s", service, "-a", account, "-w"],
+            capture_output=True,
+            text=True,
+        )
         pwd = res.stdout.strip()
 
         if not pwd:
@@ -314,7 +293,6 @@ def fill_password(service: str, account: str) -> str:
 
 
 def main():
-    import argparse
     parser = argparse.ArgumentParser(description="Run LobsterClaw MCP server")
     parser.add_argument("--sse", action="store_true", help="Run as SSE server instead of stdio")
     parser.add_argument("--host", default="127.0.0.1")
@@ -322,7 +300,6 @@ def main():
     args = parser.parse_args()
 
     if args.sse:
-        import uvicorn
         log_info(f"Starting SSE server on {args.host}:{args.port}")
         uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     else:
