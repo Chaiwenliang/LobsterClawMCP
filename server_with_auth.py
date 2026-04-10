@@ -258,12 +258,12 @@ def create_authenticated_app(server, *, debug=False):
         async with sse.connect_sse(request.scope, request.receive, request._send) as (read_stream, write_stream):
             await server.run(read_stream, write_stream, server.create_initialization_options())
 
-    async def handle_messages(request):
+    async def handle_messages(request: Request) -> JSONResponse:
         if not check_auth(request):
             return JSONResponse(status_code=401, content={"error": "unauthorized"})
         return await sse.handle_post_message(request)
 
-    async def health(request):
+    async def health(request: Request) -> JSONResponse:
         return JSONResponse({"status": "ok", "name": "LobsterClaw", "auth": "enabled" if API_KEY else "disabled"})
 
     return Starlette(
